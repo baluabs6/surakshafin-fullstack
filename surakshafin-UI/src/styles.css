@@ -1,0 +1,299 @@
+/* =========================================================================
+   SuRakshaFin design tokens
+   Concept: a digital "passbook" — the sturdy, legible, official-but-warm
+   feel of an Indian bank passbook or post-office savings ledger, not a
+   glossy fintech dashboard. Paper background, ledger rules instead of
+   drop-shadow cards, a distinct rule colour per module.
+   ========================================================================= */
+
+:root {
+  --paper: #F1EEDD;
+  --paper-raised: #FAF8EE;
+  --ink: #1B2420;
+  --ink-soft: #4B564E;
+  --rule: #D8D2B8;
+
+  --teal: #145C55;
+  --teal-dark: #0D3F3A;
+  --gold: #C98A1A;
+  --gold-dark: #9C6B12;
+  --danger: #B3402F;
+  --danger-soft: #F3DCD5;
+  --success: #2E7D5B;
+  --success-soft: #DCEAE0;
+
+  --font-display: 'Source Serif 4', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --radius: 3px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--teal-dark);
+  margin: 0 0 0.5rem;
+  line-height: 1.25;
+}
+
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.1rem; }
+
+p { margin: 0 0 0.75rem; max-width: 65ch; }
+
+a { color: var(--teal); }
+
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.25rem 3rem;
+}
+
+/* --- top bar --------------------------------------------------------- */
+
+.top-bar {
+  background: var(--teal-dark);
+  color: #EFE9D8;
+  border-bottom: 3px solid var(--gold);
+}
+
+.top-bar-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #FBF6E3;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.brand small {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #B9C9C2;
+}
+
+nav.primary-nav {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+nav.primary-nav a {
+  color: #D8E4DE;
+  text-decoration: none;
+  font-size: 0.92rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 2px solid transparent;
+}
+
+nav.primary-nav a.active,
+nav.primary-nav a:hover {
+  color: #FBF6E3;
+  border-bottom-color: var(--gold);
+}
+
+.session-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: #C7D6CF;
+}
+
+/* --- ledger section: replaces the generic "card" ---------------------- */
+
+.ledger {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--teal);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.ledger.accent-danger { border-left-color: var(--danger); }
+.ledger.accent-gold { border-left-color: var(--gold); }
+.ledger.accent-success { border-left-color: var(--success); }
+
+.ledger-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.ledger-row:last-child { border-bottom: none; }
+
+/* --- forms -------------------------------------------------------------*/
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.3rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.field-hint { font-size: 0.8rem; color: var(--ink-soft); margin-top: 0.25rem; }
+.field-error { font-size: 0.8rem; color: var(--danger); margin-top: 0.25rem; }
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+.checkbox-field input { width: auto; }
+.checkbox-field label { margin: 0; }
+
+/* --- buttons ------------------------------------------------------------*/
+
+button, .btn {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--teal);
+  color: #FBF6E3;
+}
+.btn-primary:hover { background: var(--teal-dark); }
+.btn-primary:disabled { background: #9AA8A2; cursor: not-allowed; }
+
+.btn-danger {
+  background: var(--danger);
+  color: #FBF6E3;
+}
+.btn-danger:hover { background: #8C3325; }
+
+.btn-quiet {
+  background: transparent;
+  border-color: var(--rule);
+  color: var(--ink);
+}
+.btn-quiet:hover { border-color: var(--teal); color: var(--teal); }
+
+/* --- badges / status ----------------------------------------------------*/
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+}
+.badge-severity-CRITICAL, .badge-severity-HIGH { background: var(--danger-soft); color: var(--danger); }
+.badge-severity-MEDIUM { background: #F6E7C7; color: var(--gold-dark); }
+.badge-severity-LOW { background: var(--success-soft); color: var(--success); }
+
+.badge-status { background: #E4E0CB; color: var(--ink-soft); }
+
+/* --- utility --------------------------------------------------------- */
+
+.muted { color: var(--ink-soft); }
+.stack > * + * { margin-top: 1rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+@media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.progress-track {
+  height: 10px;
+  background: var(--rule);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--teal);
+}
+.progress-fill.over { background: var(--danger); }
+
+.empty-state {
+  padding: 1.5rem;
+  text-align: left;
+  color: var(--ink-soft);
+  border: 1px dashed var(--rule);
+}
+
+.banner-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.banner-success {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+pre.complaint-text {
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  background: #fff;
+  border: 1px solid var(--rule);
+  padding: 1rem;
+  font-size: 0.9rem;
+}

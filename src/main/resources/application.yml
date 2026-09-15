@@ -1,0 +1,38 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: surakshafin-backend
+  datasource:
+    url: jdbc:h2:mem:surakshafin;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+springdoc:
+  swagger-ui:
+    path: /docs
+
+surakshafin:
+  jwt:
+    # No secret is hardcoded here. Set the SURAKSHAFIN_JWT_SECRET environment
+    # variable before starting the app (32+ random bytes, e.g. `openssl rand -hex 32`).
+    # In production this is replaced entirely by OAuth2/OIDC token issuance via
+    # AWS Cognito or Keycloak, per the architecture blueprint.
+    secret: "${SURAKSHAFIN_JWT_SECRET:*****************************}"
+    expiration-minutes: 60
+  budget:
+    default-nudge-threshold-percent: 80
