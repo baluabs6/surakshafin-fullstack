@@ -28,11 +28,31 @@ springdoc:
 
 surakshafin:
   jwt:
-    # No secret is hardcoded here. Set the SURAKSHAFIN_JWT_SECRET environment
-    # variable before starting the app (32+ random bytes, e.g. `openssl rand -hex 32`).
-    # In production this is replaced entirely by OAuth2/OIDC token issuance via
-    # AWS Cognito or Keycloak, per the architecture blueprint.
-    secret: "${SURAKSHAFIN_JWT_SECRET:*****************************}"
+    # Security gap fix: no fallback value here anymore. A placeholder default meant every
+    # unconfigured deployment signed tokens with the same, publicly-visible "secret" — now the
+    # app refuses to start unless a real one is provided.
+    # export SURAKSHAFIN_JWT_SECRET=$(openssl rand -hex 32)
+    secret: "${SURAKSHAFIN_JWT_SECRET}"
     expiration-minutes: 60
   budget:
     default-nudge-threshold-percent: 80
+  fraud:
+    # New feature: pre-transaction safety check thresholds.
+    new-payee-amount-threshold: 5000
+    cooling-off-seconds: 600
+  security:
+    max-login-attempts: 5
+    lockout-minutes: 15
+    reset-token-validity-minutes: 15
+  cors:
+    # Comma-separated list of allowed origin patterns. Set SURAKSHAFIN_CORS_ORIGINS to your real
+    # frontend origin(s) in any deployed environment — this default is for local dev only.
+    allowed-origins: "${SURAKSHAFIN_CORS_ORIGINS:http://localhost:*}"
+  # Security gap fix: H2 console + Swagger/OpenAPI used to be reachable unconditionally, even if
+  # this exact jar were deployed as-is. Off by default; set true only for local development.
+  dev-tools-enabled: "${SURAKSHAFIN_DEV_TOOLS_ENABLED:false}"
+  admin:
+    # Optional bootstrap operator account, created once at startup if both are set and no admin
+    # exists yet. Never hardcode admin credentials in source — see AdminSeeder.
+    bootstrap-phone: "${SURAKSHAFIN_ADMIN_PHONE:}"
+    bootstrap-password: "${SURAKSHAFIN_ADMIN_PASSWORD:}"

@@ -28,4 +28,9 @@ public class ScamPattern {
 
     @Column(nullable = false)
     private String severity; // LOW, MEDIUM, HIGH, CRITICAL
+
+    // New feature: crowd-verification. Users can confirm "this scam is still active" so the
+    // static seeded library becomes a living, community-checked signal over time.
+    @Column(nullable = false)
+    private int confirmedCount = 0;
 }

@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -17,9 +19,11 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final TokenBlocklistService tokenBlocklistService;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, TokenBlocklistService tokenBlocklistService) {
         this.jwtService = jwtService;
+        this.tokenBlocklistService = tokenBlocklistService;
     }
 
     @Override
@@ -29,10 +33,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            if (jwtService.isValid(token)) {
+            // Security gap fix: a logged-out / revoked token used to still authenticate successfully
+            // because validity was based purely on the JWT signature and expiry.
+            if (jwtService.isValid(token) && !tokenBlocklistService.isBlocked(token)) {
                 Long userId = jwtService.extractUserId(token);
-                var auth = new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                String role = jwtService.extractRole(token);
+                List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                request.setAttribute("surakshafin.rawToken", token);
             }
         }
         filterChain.doFilter(request, response);

@@ -19,21 +19,33 @@ import java.util.Date;
 @Component
 public class JwtService {
 
+    // Security gap fix: application.yml used to fall back to a fixed placeholder string of
+    // asterisks when SURAKSHAFIN_JWT_SECRET wasn't set, which meant every unconfigured
+    // deployment signed tokens with the same, publicly-visible "secret". Fail fast instead.
+    private static final int MIN_SECRET_BYTES = 32;
+
     private final SecretKey key;
     private final long expirationMinutes;
 
     public JwtService(@Value("${surakshafin.jwt.secret}") String secret,
                        @Value("${surakshafin.jwt.expiration-minutes}") long expirationMinutes) {
+        if (secret == null || secret.isBlank() || secret.chars().allMatch(c -> c == '*')
+                || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "SURAKSHAFIN_JWT_SECRET is missing or too weak. Set it to at least " + MIN_SECRET_BYTES +
+                            " random bytes before starting the app, e.g.: export SURAKSHAFIN_JWT_SECRET=$(openssl rand -hex 32)");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMinutes = expirationMinutes;
     }
 
-    public String issueToken(Long userId, String phoneNumber) {
+    public String issueToken(Long userId, String phoneNumber, boolean admin) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMinutes * 60_000);
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("phoneNumber", phoneNumber)
+                .claim("role", admin ? "ADMIN" : "USER")
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
@@ -45,16 +57,30 @@ public class JwtService {
     }
 
     public Long extractUserId(String token) {
-        Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-        return Long.valueOf(claims.getSubject());
+        return Long.valueOf(parseClaims(token).getSubject());
+    }
+
+    public String extractRole(String token) {
+        Object role = parseClaims(token).get("role");
+        return role == null ? "USER" : role.toString();
+    }
+
+    /** Milliseconds until this (already-validated) token expires; used to size the logout blocklist entry. */
+    public long remainingValidityMillis(String token) {
+        Date expiry = parseClaims(token).getExpiration();
+        return Math.max(0, expiry.getTime() - System.currentTimeMillis());
     }
 
     public boolean isValid(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+            parseClaims(token);
             return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
 }

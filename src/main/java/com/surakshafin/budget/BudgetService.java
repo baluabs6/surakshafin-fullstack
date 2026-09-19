@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class BudgetService {
@@ -46,7 +48,25 @@ public class BudgetService {
     }
 
     public Dtos.BudgetSummary summary(Long userId) {
-        BigDecimal spent = transactionRepository.findByUserIdOrderByOccurredAtDesc(userId).stream()
+        List<Transaction> transactions = transactionRepository.findByUserIdOrderByOccurredAtDesc(userId);
+
+        BigDecimal spent = transactions.stream()
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // New feature: per-category breakdown, built from the same transaction list.
+        List<Dtos.CategorySpend> byCategory = transactions.stream()
+                .collect(Collectors.groupingBy(Transaction::getCategory,
+                        Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)))
+                .entrySet().stream()
+                .map(e -> new Dtos.CategorySpend(e.getKey(), e.getValue()))
+                .sorted((a, b) -> b.amount().compareTo(a.amount()))
+                .toList();
+
+        // New feature: total BNPL exposure — the single highest-risk number for this app's
+        // target audience, previously tracked per-transaction but never aggregated.
+        BigDecimal bnplExposure = transactions.stream()
+                .filter(Transaction::isBnpl)
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -56,7 +76,8 @@ public class BudgetService {
 
         if (limit.compareTo(BigDecimal.ZERO) == 0) {
             return new Dtos.BudgetSummary(limit, spent, BigDecimal.ZERO, 0,
-                    "No monthly budget set yet — set one to get plain-language spend nudges.");
+                    "No monthly budget set yet — set one to get plain-language spend nudges.",
+                    byCategory, bnplExposure);
         }
 
         BigDecimal remaining = limit.subtract(spent);
@@ -73,6 +94,6 @@ public class BudgetService {
             nudge = "You're on track — " + percentUsed + "% of this month's budget used.";
         }
 
-        return new Dtos.BudgetSummary(limit, spent, remaining, percentUsed, nudge);
+        return new Dtos.BudgetSummary(limit, spent, remaining, percentUsed, nudge, byCategory, bnplExposure);
     }
 }
