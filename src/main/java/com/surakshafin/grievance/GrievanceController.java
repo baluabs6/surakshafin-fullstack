@@ -32,8 +32,6 @@ public class GrievanceController {
         return ApiResponse.ok(grievanceService.get(CurrentUser.id(), id));
     }
 
-    // Feature gap fix: no way previously existed to move a grievance out of its filed state.
-    // Restricted to ROLE_ADMIN at the SecurityConfig layer.
     @PatchMapping("/{id}/status")
     public ApiResponse<Dtos.GrievanceView> updateStatus(@PathVariable Long id, @Valid @RequestBody Dtos.UpdateStatusRequest request) {
         return ApiResponse.ok(grievanceService.updateStatus(id, request), "Status updated");

@@ -13,12 +13,8 @@ import java.util.Set;
 @Service
 public class FraudService {
 
-    // Feature gap fix: status existed on FraudReport but had no way to change from its default.
     private static final Set<String> VALID_STATUSES = Set.of("SUBMITTED", "FORWARDED_TO_NPCI", "FORWARDED_TO_CYBER_CELL", "RESOLVED");
 
-    // Generic reminders shown for a MEDIUM-risk (new payee + large amount) pre-transaction check.
-    // Kept deliberately short and non-category-specific for v1; see design notes for a richer,
-    // scam-pattern-matched version.
     private static final List<String> NEW_PAYEE_CHECKLIST = List.of(
             "Double-check the payee's name shown on the confirmation screen matches who you expect",
             "If someone asked you to pay to \"receive\" a refund or prize, that's always a scam",
@@ -57,8 +53,6 @@ public class FraudService {
         report.setDetails(req.details());
         report.setSuspectUpiId(req.suspectUpiId());
         report.setSuspectPhoneNumber(req.suspectPhoneNumber());
-        // NOTE: in the full architecture this is where a FraudAlertRaised domain event
-        // is published to SNS/SQS so notification-service and audit-compliance-service react.
         report = fraudReportRepository.save(report);
         return Dtos.ReportView.from(report);
     }
@@ -68,7 +62,6 @@ public class FraudService {
                 .stream().map(Dtos.ReportView::from).toList();
     }
 
-    /** Feature gap fix. Admin-only (enforced in SecurityConfig). */
     public Dtos.ReportView updateStatus(Long id, Dtos.UpdateStatusRequest req) {
         if (!VALID_STATUSES.contains(req.status())) {
             throw new BadRequestException("status must be one of " + VALID_STATUSES);
@@ -80,9 +73,6 @@ public class FraudService {
         return Dtos.ReportView.from(report);
     }
 
-    /** New feature: pre-transaction safety check. Fails open by design — this is a friction/
-     *  awareness layer, not a payment gate, so any ambiguity resolves to LOW risk rather than
-     *  blocking a transfer the user may urgently need to make. */
     public Dtos.PreTransactionCheckResponse checkBeforeTransaction(Long userId, Dtos.PreTransactionCheckRequest req) {
         String identifier = req.payeeUpiId() != null && !req.payeeUpiId().isBlank()
                 ? req.payeeUpiId() : req.payeePhoneNumber();
@@ -118,8 +108,6 @@ public class FraudService {
         return new Dtos.PreTransactionCheckResponse("LOW", List.of(), List.of(), false, 0);
     }
 
-    // --- new feature: trusted payees ---
-
     public Dtos.TrustedPayeeView addTrustedPayee(Long userId, Dtos.TrustedPayeeRequest req) {
         trustedPayeeRepository.findByUserIdAndPayeeIdentifier(userId, req.payeeIdentifier())
                 .ifPresent(p -> { throw new BadRequestException("This payee is already trusted"); });
@@ -140,9 +128,6 @@ public class FraudService {
         trustedPayeeRepository.deleteByUserIdAndId(userId, id);
     }
 
-    /** New feature: crowd-verification that a seeded/reported scam pattern is still active.
-     *  Note: this demo doesn't dedupe per-user (no join table yet) — a real rollout would cap
-     *  one confirmation per user per pattern before this count is trusted for ranking. */
     public Dtos.ScamPatternView confirmPattern(Long patternId) {
         ScamPattern pattern = scamPatternRepository.findById(patternId)
                 .orElseThrow(() -> new NotFoundException("Scam pattern not found"));

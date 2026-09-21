@@ -54,7 +54,6 @@ public class BudgetService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // New feature: per-category breakdown, built from the same transaction list.
         List<Dtos.CategorySpend> byCategory = transactions.stream()
                 .collect(Collectors.groupingBy(Transaction::getCategory,
                         Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)))
@@ -63,8 +62,6 @@ public class BudgetService {
                 .sorted((a, b) -> b.amount().compareTo(a.amount()))
                 .toList();
 
-        // New feature: total BNPL exposure — the single highest-risk number for this app's
-        // target audience, previously tracked per-transaction but never aggregated.
         BigDecimal bnplExposure = transactions.stream()
                 .filter(Transaction::isBnpl)
                 .map(Transaction::getAmount)

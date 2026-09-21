@@ -32,27 +32,21 @@ public class FraudController {
         return ApiResponse.ok(fraudService.myReports(CurrentUser.id()));
     }
 
-    // Feature gap fix: reports previously stayed "SUBMITTED" forever with no operator workflow.
-    // Restricted to ROLE_ADMIN at the SecurityConfig layer.
     @PatchMapping("/reports/{id}/status")
     public ApiResponse<Dtos.ReportView> updateStatus(@PathVariable Long id, @Valid @RequestBody Dtos.UpdateStatusRequest request) {
         return ApiResponse.ok(fraudService.updateStatus(id, request), "Status updated");
     }
 
-    // New feature: crowd-verification that a scam pattern is still active.
     @PostMapping("/patterns/{id}/confirm")
     public ApiResponse<Dtos.ScamPatternView> confirmPattern(@PathVariable Long id) {
         return ApiResponse.ok(fraudService.confirmPattern(id), "Thanks for confirming");
     }
 
-    // New feature: pre-transaction safety check — called by the client just before a transfer
-    // is confirmed, so risk signals surface before the money moves rather than after.
     @PostMapping("/pre-transaction-check")
     public ApiResponse<Dtos.PreTransactionCheckResponse> preTransactionCheck(@Valid @RequestBody Dtos.PreTransactionCheckRequest request) {
         return ApiResponse.ok(fraudService.checkBeforeTransaction(CurrentUser.id(), request));
     }
 
-    // New feature: trusted payees, so repeat transfers to known-safe people skip the friction above.
     @PostMapping("/trusted-payees")
     public ApiResponse<Dtos.TrustedPayeeView> addTrustedPayee(@Valid @RequestBody Dtos.TrustedPayeeRequest request) {
         return ApiResponse.ok(fraudService.addTrustedPayee(CurrentUser.id(), request), "Payee trusted");

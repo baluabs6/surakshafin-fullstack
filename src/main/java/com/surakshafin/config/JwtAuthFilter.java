@@ -33,8 +33,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
-            // Security gap fix: a logged-out / revoked token used to still authenticate successfully
-            // because validity was based purely on the JWT signature and expiry.
             if (jwtService.isValid(token) && !tokenBlocklistService.isBlocked(token)) {
                 Long userId = jwtService.extractUserId(token);
                 String role = jwtService.extractRole(token);

@@ -7,12 +7,6 @@ import com.surakshafin.literacy.LiteracyContentRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-/**
- * Seeds a handful of scam patterns and vernacular literacy articles so the demo
- * has content on first run. In production, scam-pattern data comes from an
- * NPCI/Cyber Cell feed and literacy content is generated with Spring AI from
- * source RBI/NPCI guidance, with human review before publishing.
- */
 @Component
 public class DemoDataSeeder implements CommandLineRunner {
 

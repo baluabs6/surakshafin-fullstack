@@ -10,18 +10,9 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-/**
- * Minimal JWT issuance/validation for the demo.
- * In the production architecture this is replaced by OAuth2/OIDC token issuance
- * via AWS Cognito or Keycloak, with the gateway (Apigee / AWS API Gateway)
- * validating tokens before requests ever reach a service.
- */
 @Component
 public class JwtService {
 
-    // Security gap fix: application.yml used to fall back to a fixed placeholder string of
-    // asterisks when SURAKSHAFIN_JWT_SECRET wasn't set, which meant every unconfigured
-    // deployment signed tokens with the same, publicly-visible "secret". Fail fast instead.
     private static final int MIN_SECRET_BYTES = 32;
 
     private final SecretKey key;
@@ -65,7 +56,6 @@ public class JwtService {
         return role == null ? "USER" : role.toString();
     }
 
-    /** Milliseconds until this (already-validated) token expires; used to size the logout blocklist entry. */
     public long remainingValidityMillis(String token) {
         Date expiry = parseClaims(token).getExpiration();
         return Math.max(0, expiry.getTime() - System.currentTimeMillis());

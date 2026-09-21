@@ -29,10 +29,7 @@ public class Dtos {
         }
     }
 
-    // Feature gap fix: FraudReport.status existed but nothing ever moved it off "SUBMITTED".
     public record UpdateStatusRequest(@NotBlank String status) {}
-
-    // --- new feature: pre-transaction safety check ---
 
     public record PreTransactionCheckRequest(
             String payeeUpiId,
@@ -41,14 +38,12 @@ public class Dtos {
     ) {}
 
     public record PreTransactionCheckResponse(
-            String riskLevel, // LOW, MEDIUM, HIGH
+            String riskLevel,
             List<String> reasons,
             List<String> checklistPrompts,
             boolean suggestCoolingOff,
             int coolingOffSeconds
     ) {}
-
-    // --- new feature: trusted payees ---
 
     public record TrustedPayeeRequest(
             @NotBlank @Size(max = 100) String payeeIdentifier,

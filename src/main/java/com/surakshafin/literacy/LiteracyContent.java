@@ -23,12 +23,11 @@ public class LiteracyContent {
     private String body;
 
     @Column(nullable = false)
-    private String topic; // UPI_SAFETY, BUDGETING, BNPL_RISKS, MULE_ACCOUNTS, GRIEVANCE_RIGHTS
+    private String topic;
 
-    /** ISO 639-1: hi, te, ta, bn, mr, en. Same topic ships once per language. */
     @Column(nullable = false)
     private String language;
 
     @Column(nullable = false)
-    private String format = "ARTICLE"; // ARTICLE, VIDEO, AUDIO — low-bandwidth delivery hint for the client
+    private String format = "ARTICLE";
 }

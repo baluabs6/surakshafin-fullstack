@@ -5,15 +5,6 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Security / feature gap fix: the original design had no logout endpoint at all — a stolen
- * bearer token stayed valid until it naturally expired, with no way for a user to revoke it.
- *
- * This is a minimal in-memory blocklist (fine for a single-instance demo deployment). In the
- * production architecture this is replaced by a shared store (e.g. Redis) keyed by token
- * fingerprint with a TTL equal to the token's remaining lifetime, so it scales across instances
- * and never grows unbounded.
- */
 @Component
 public class TokenBlocklistService {
 

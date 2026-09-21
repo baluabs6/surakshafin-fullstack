@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Public — no auth required, so low-connectivity/first-time users can learn before they even register. */
 @RestController
 @RequestMapping("/api/v1/literacy")
 public class LiteracyController {

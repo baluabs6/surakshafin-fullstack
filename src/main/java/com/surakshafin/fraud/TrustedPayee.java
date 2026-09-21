@@ -7,8 +7,6 @@ import lombok.Setter;
 
 import java.time.Instant;
 
-/** A payee the user has explicitly marked as trusted, so future transfers to them skip the
- *  pre-transaction safety friction. Never auto-populated — trust has to be an explicit user action. */
 @Entity
 @Table(name = "trusted_payees", uniqueConstraints = @UniqueConstraint(columnNames = {"userId", "payeeIdentifier"}))
 @Getter
@@ -23,11 +21,10 @@ public class TrustedPayee {
     @Column(nullable = false)
     private Long userId;
 
-    /** A UPI ID or phone number, matched verbatim against pre-transaction-check requests. */
     @Column(nullable = false)
     private String payeeIdentifier;
 
-    private String label; // e.g. "Landlord", "Mom" — optional, user-supplied
+    private String label;
 
     @Column(nullable = false)
     private Instant createdAt = Instant.now();

@@ -7,7 +7,6 @@ import java.time.temporal.ChronoUnit;
 
 public class Dtos {
 
-    /** Answers to the decision-tree wizard the Angular UI walks the user through. */
     public record RoutingRequest(
             @NotBlank String issueType,
             @NotBlank @Size(max = 2000) String description,
@@ -16,7 +15,6 @@ public class Dtos {
             boolean suspectedFraud
     ) {}
 
-    // Feature gap fix: status existed on the entity but there was no endpoint to change it.
     public record UpdateStatusRequest(@NotBlank String status) {}
 
     public record GrievanceView(
@@ -26,9 +24,6 @@ public class Dtos {
     ) {
         public static GrievanceView from(Grievance g) {
             long days = ChronoUnit.DAYS.between(g.getCreatedAt(), java.time.Instant.now());
-            // New feature: surfaces the same 30-day threshold GrievanceRoutingEngine uses for
-            // BANK -> RBI_OMBUDSMAN escalation, so the UI can prompt the user to escalate instead
-            // of relying on them to track the date themselves.
             boolean escalationDue = "BANK".equals(g.getRoutedTo())
                     && !"RESOLVED".equals(g.getStatus())
                     && days >= 30;

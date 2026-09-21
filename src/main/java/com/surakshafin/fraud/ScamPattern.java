@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Reference library of known scam patterns, surfaced to users as real-time alerts/awareness content. */
 @Entity
 @Table(name = "scam_patterns")
 @Getter
@@ -24,13 +23,11 @@ public class ScamPattern {
     private String description;
 
     @Column(nullable = false)
-    private String category; // e.g. UPI_QR, FAKE_CUSTOMER_CARE, LOAN_APP, JOB_SCAM, KYC_PHISHING
+    private String category;
 
     @Column(nullable = false)
-    private String severity; // LOW, MEDIUM, HIGH, CRITICAL
+    private String severity;
 
-    // New feature: crowd-verification. Users can confirm "this scam is still active" so the
-    // static seeded library becomes a living, community-checked signal over time.
     @Column(nullable = false)
     private int confirmedCount = 0;
 }

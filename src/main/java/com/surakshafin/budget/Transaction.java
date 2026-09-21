@@ -23,7 +23,7 @@ public class Transaction {
     private Long userId;
 
     @Column(nullable = false)
-    private String category; // GROCERIES, BNPL_EMI, SUBSCRIPTIONS, DINING, TRAVEL, OTHER
+    private String category;
 
     @Column(nullable = false)
     private BigDecimal amount;

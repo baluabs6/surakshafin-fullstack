@@ -25,8 +25,6 @@ public class Dtos {
 
     public record SetBudgetRequest(@NotNull @Positive BigDecimal monthlyLimit) {}
 
-    // New feature: per-category breakdown, computed from data that was already being tracked
-    // (Transaction.category) but never surfaced beyond a single running total.
     public record CategorySpend(String category, BigDecimal amount) {}
 
     public record BudgetSummary(
@@ -36,8 +34,6 @@ public class Dtos {
             int percentUsed,
             String nudge,
             List<CategorySpend> byCategory,
-            // New feature: aggregate BNPL exposure, computed from Transaction.isBnpl which was
-            // captured on every transaction but never rolled up anywhere.
             BigDecimal bnplExposure
     ) {}
 }

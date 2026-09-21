@@ -11,7 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/** Central place every module's exceptions land, so API error shape is consistent. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -34,9 +33,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(LockedException.class)
     public ResponseEntity<ApiResponse<Void>> handleLocked(LockedException ex) {
-        // Security gap fix: surfaced now that IdentityService actually locks accounts after
-        // repeated failed logins. Message is deliberately generic (no exact unlock time) to
-        // avoid giving an attacker a precise retry clock.
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(ApiResponse.error("Too many failed attempts. Try again later."));
     }
@@ -57,9 +53,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
-        // Security gap fix: this used to echo ex.getMessage() straight into the HTTP response,
-        // which can leak internal details (SQL, stack state, class names) to the client. Log it
-        // server-side with full detail; the client only ever gets a generic message.
         log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Something went wrong. Please try again."));

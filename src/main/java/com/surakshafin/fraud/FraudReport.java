@@ -7,8 +7,6 @@ import lombok.Setter;
 
 import java.time.Instant;
 
-/** A user's one-tap scam/fraud report. In production this fans out a FraudAlertRaised event
- *  to notification-service and audit-compliance-service, and forwards to NPCI/Cyber Crime Portal. */
 @Entity
 @Table(name = "fraud_reports")
 @Getter
@@ -33,7 +31,7 @@ public class FraudReport {
     private String suspectPhoneNumber;
 
     @Column(nullable = false)
-    private String status = "SUBMITTED"; // SUBMITTED, FORWARDED_TO_NPCI, FORWARDED_TO_CYBER_CELL, RESOLVED
+    private String status = "SUBMITTED";
 
     @Column(nullable = false)
     private Instant createdAt = Instant.now();

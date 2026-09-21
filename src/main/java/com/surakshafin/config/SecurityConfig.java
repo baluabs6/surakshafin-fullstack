@@ -24,13 +24,8 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
-    // Security gap fix: origins were hardcoded to "http://localhost:*", which is fine for the
-    // demo but would either break or (if loosened carelessly) over-permit a real deployment.
-    // Now driven by config so prod sets its real origin(s) via SURAKSHAFIN_CORS_ORIGINS.
     private final List<String> allowedOrigins;
 
-    // Security gap fix: H2 console and Swagger/OpenAPI were always reachable, including in a
-    // prod-like deployment of this exact jar. Now off by default and opt-in for local dev only.
     private final boolean devToolsEnabled;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter,
@@ -49,7 +44,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // stateless bearer-token API; no cookie-based session to protect
+                .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> {
@@ -60,20 +55,17 @@ public class SecurityConfig {
                     if (devToolsEnabled) {
                         auth.requestMatchers("/h2-console/**", "/docs/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll();
                     }
-                    // Feature gap fix: status transitions on fraud reports / grievances used to have
-                    // no endpoint at all; now that they exist, only platform operators can call them.
                     auth.requestMatchers("/api/v1/fraud/reports/*/status").hasRole("ADMIN");
                     auth.requestMatchers("/api/v1/grievances/*/status").hasRole("ADMIN");
                     auth.anyRequest().authenticated();
                 })
                 .headers(headers -> {
                     if (devToolsEnabled) {
-                        headers.frameOptions(frame -> frame.disable()); // needed for h2-console only
+                        headers.frameOptions(frame -> frame.disable());
                     }
-                    // Security gap fix: no security response headers were set at all.
                     headers
                             .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
-                            .contentTypeOptions(contentType -> {}) // X-Content-Type-Options: nosniff
+                            .contentTypeOptions(contentType -> {})
                             .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
                 })
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

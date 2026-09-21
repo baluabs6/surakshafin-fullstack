@@ -60,8 +60,6 @@ public class IdentityService {
     }
 
     public Dtos.AuthResponse login(Dtos.LoginRequest req) {
-        // Security gap fix: login previously had no brute-force protection whatsoever — an
-        // attacker could try unlimited passwords against a known phone number.
         User user = userRepository.findByPhoneNumber(req.phoneNumber())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
@@ -69,7 +67,6 @@ public class IdentityService {
             if (user.getLockedUntil().isAfter(Instant.now())) {
                 throw new LockedException("Account temporarily locked");
             }
-            // Lock window has expired: clear it before evaluating this attempt.
             user.setLockedUntil(null);
             user.setFailedLoginAttempts(0);
         }
@@ -89,7 +86,6 @@ public class IdentityService {
         return buildAuthResponse(user);
     }
 
-    /** Feature gap fix: revokes the current session's token so a shared/stolen device can be logged out. */
     public void logout(String rawToken) {
         if (rawToken == null) {
             return;
@@ -97,14 +93,10 @@ public class IdentityService {
         tokenBlocklistService.block(rawToken, jwtService.remainingValidityMillis(rawToken));
     }
 
-    // --- feature gap fix: password reset (previously no recovery path existed at all) ---
-
     public Dtos.ForgotPasswordResponse forgotPassword(Dtos.ForgotPasswordRequest req) {
         String genericMessage = "If an account exists for this number, a reset code has been issued.";
         var userOpt = userRepository.findByPhoneNumber(req.phoneNumber());
         if (userOpt.isEmpty()) {
-            // Security gap fix: don't reveal via a different response shape/timing whether the
-            // phone number is registered — same generic message either way.
             return new Dtos.ForgotPasswordResponse(genericMessage, null);
         }
         User user = userOpt.get();
@@ -112,7 +104,6 @@ public class IdentityService {
         user.setResetToken(token);
         user.setResetTokenExpiry(Instant.now().plus(resetTokenValidityMinutes, ChronoUnit.MINUTES));
         userRepository.save(user);
-        // Demo-mode only: the token would normally go out over SMS, never in the API response.
         return new Dtos.ForgotPasswordResponse(genericMessage, token);
     }
 
@@ -130,13 +121,9 @@ public class IdentityService {
         userRepository.save(user);
     }
 
-    // --- feature gap fix: KYC-lite verification (the flag existed on User but nothing set it) ---
-
     public Dtos.UserProfile verifyKycLite(Long userId, Dtos.KycLiteVerifyRequest req) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
-        // Demo-mode check: real verification calls an external PAN/Aadhaar-lite verification
-        // service (per the architecture blueprint) rather than accepting any well-formed PAN.
         user.setKycLiteVerified(true);
         user = userRepository.save(user);
         return Dtos.UserProfile.from(user);
@@ -156,7 +143,6 @@ public class IdentityService {
     private String generateResetToken() {
         byte[] bytes = new byte[6];
         SECURE_RANDOM.nextBytes(bytes);
-        // Short, human-typeable code rather than a long opaque token, since a user reads this off an SMS.
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes).substring(0, 8).toUpperCase();
     }
 }

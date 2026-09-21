@@ -22,16 +22,16 @@ public class Grievance {
     private Long userId;
 
     @Column(nullable = false)
-    private String issueType; // UNAUTHORIZED_TXN, DELAYED_REFUND, ACCOUNT_FREEZE, SERVICE_DEFICIENCY, KYC_ISSUE, OTHER
+    private String issueType;
 
     @Column(nullable = false, length = 2000)
     private String description;
 
     @Column(nullable = false)
-    private String routedTo; // BANK, NPCI, RBI_OMBUDSMAN, CYBER_CELL
+    private String routedTo;
 
     @Column(nullable = false)
-    private String status = "DRAFTED"; // DRAFTED, FILED, IN_PROGRESS, RESOLVED, ESCALATED
+    private String status = "DRAFTED";
 
     @Column(nullable = false, length = 4000)
     private String generatedComplaintText;

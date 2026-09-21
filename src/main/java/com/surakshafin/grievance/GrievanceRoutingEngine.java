@@ -1,10 +1,5 @@
 package com.surakshafin.grievance;
 
-/**
- * The decision-tree logic behind grievance-router-service. This is the piece of
- * the platform that decides: bank first, escalate to RBI Ombudsman, go to NPCI,
- * or go straight to the Cyber Crime Portal — and drafts the complaint text.
- */
 public final class GrievanceRoutingEngine {
 
     private GrievanceRoutingEngine() {}

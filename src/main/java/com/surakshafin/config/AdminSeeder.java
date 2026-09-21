@@ -10,15 +10,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/**
- * Feature gap fix: fraud-report and grievance status updates need an operator/admin role, but
- * there was previously no admin concept and no way to create one. Rather than hardcoding an
- * admin phone/password in source (a security gap in itself), this only creates the bootstrap
- * admin when both env vars are explicitly set, and only once (it never overwrites an existing
- * admin's password on restart).
- */
 @Component
-@Order(1) // run before DemoDataSeeder for a predictable startup order
+@Order(1)
 public class AdminSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminSeeder.class);
@@ -46,7 +39,7 @@ public class AdminSeeder implements CommandLineRunner {
             return;
         }
         if (userRepository.existsByPhoneNumber(bootstrapPhone)) {
-            return; // already provisioned; never overwrite an existing account's password on restart
+            return;
         }
         User admin = new User();
         admin.setPhoneNumber(bootstrapPhone);

@@ -27,25 +27,20 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    /** ISO 639-1 code: hi, te, ta, bn, mr, en ... drives literacy content + notification language. */
     @Column(nullable = false)
     private String preferredLanguage = "en";
 
     @Column(nullable = false)
     private boolean kycLiteVerified = false;
 
-    /** True only for platform operators (fraud-cell / grievance-desk reviewers), never set from self-registration. */
     @Column(nullable = false)
     private boolean admin = false;
 
-    // --- brute-force protection (security gap fix) ---
     @Column(nullable = false)
     private int failedLoginAttempts = 0;
 
-    /** Null when the account isn't locked; a future instant while a lockout is active. */
     private Instant lockedUntil;
 
-    // --- password reset (feature gap fix) ---
     private String resetToken;
     private Instant resetTokenExpiry;
 
