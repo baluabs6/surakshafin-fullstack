@@ -33,8 +33,9 @@ public class BudgetController {
         return ApiResponse.ok(null, "Budget updated");
     }
 
+    /** Optional {@code month} in {@code yyyy-MM} format; defaults to the current month. */
     @GetMapping("/summary")
-    public ApiResponse<Dtos.BudgetSummary> summary() {
-        return ApiResponse.ok(budgetService.summary(CurrentUser.id()));
+    public ApiResponse<Dtos.BudgetSummary> summary(@RequestParam(required = false) String month) {
+        return ApiResponse.ok(budgetService.summary(CurrentUser.id(), month));
     }
 }

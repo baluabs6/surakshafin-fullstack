@@ -28,6 +28,7 @@ public class Dtos {
     public record CategorySpend(String category, BigDecimal amount) {}
 
     public record BudgetSummary(
+            String month,
             BigDecimal monthlyLimit,
             BigDecimal spentThisSet,
             BigDecimal remaining,

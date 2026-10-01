@@ -55,6 +55,7 @@ export interface TransactionView {
 }
 
 export interface BudgetSummary {
+  month?: string;
   monthlyLimit: number;
   spentThisSet: number;
   remaining: number;

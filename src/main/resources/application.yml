@@ -36,6 +36,8 @@ surakshafin:
     expiration-minutes: 60
   budget:
     default-nudge-threshold-percent: 80
+    # Timezone used to decide where a calendar month starts and ends for the monthly budget.
+    timezone: Asia/Kolkata
   fraud:
     # New feature: pre-transaction safety check thresholds.
     new-payee-amount-threshold: 5000

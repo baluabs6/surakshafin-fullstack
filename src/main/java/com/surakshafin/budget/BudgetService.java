@@ -1,10 +1,15 @@
 package com.surakshafin.budget;
 
+import com.surakshafin.common.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -15,13 +20,16 @@ public class BudgetService {
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
     private final int defaultNudgeThreshold;
+    private final ZoneId zone;
 
     public BudgetService(TransactionRepository transactionRepository,
                           BudgetRepository budgetRepository,
-                          @Value("${surakshafin.budget.default-nudge-threshold-percent}") int defaultNudgeThreshold) {
+                          @Value("${surakshafin.budget.default-nudge-threshold-percent}") int defaultNudgeThreshold,
+                          @Value("${surakshafin.budget.timezone:Asia/Kolkata}") String timezone) {
         this.transactionRepository = transactionRepository;
         this.budgetRepository = budgetRepository;
         this.defaultNudgeThreshold = defaultNudgeThreshold;
+        this.zone = ZoneId.of(timezone);
     }
 
     public Dtos.TransactionView addTransaction(Long userId, Dtos.TransactionRequest req) {
@@ -47,8 +55,18 @@ public class BudgetService {
         budgetRepository.save(budget);
     }
 
-    public Dtos.BudgetSummary summary(Long userId) {
-        List<Transaction> transactions = transactionRepository.findByUserIdOrderByOccurredAtDesc(userId);
+    /**
+     * Spend vs. budget for a single calendar month (default: the current month, in the configured
+     * timezone). Previously this summed every transaction ever logged against the *monthly* limit,
+     * so users looked over budget from their second month onward.
+     */
+    public Dtos.BudgetSummary summary(Long userId, String monthParam) {
+        YearMonth month = parseMonth(monthParam);
+        Instant from = month.atDay(1).atStartOfDay(zone).toInstant();
+        Instant to = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+
+        List<Transaction> transactions = transactionRepository
+                .findByUserIdAndOccurredAtGreaterThanEqualAndOccurredAtLessThanOrderByOccurredAtDesc(userId, from, to);
 
         BigDecimal spent = transactions.stream()
                 .map(Transaction::getAmount)
@@ -62,7 +80,9 @@ public class BudgetService {
                 .sorted((a, b) -> b.amount().compareTo(a.amount()))
                 .toList();
 
-        BigDecimal bnplExposure = transactions.stream()
+        // BNPL exposure stays all-time on purpose: there is no repayment tracking yet, so an older
+        // BNPL purchase may still be owed even though it falls outside this month's spend.
+        BigDecimal bnplExposure = transactionRepository.findByUserIdOrderByOccurredAtDesc(userId).stream()
                 .filter(Transaction::isBnpl)
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -72,7 +92,7 @@ public class BudgetService {
                 .orElse(BigDecimal.ZERO);
 
         if (limit.compareTo(BigDecimal.ZERO) == 0) {
-            return new Dtos.BudgetSummary(limit, spent, BigDecimal.ZERO, 0,
+            return new Dtos.BudgetSummary(month.toString(), limit, spent, BigDecimal.ZERO, 0,
                     "No monthly budget set yet — set one to get plain-language spend nudges.",
                     byCategory, bnplExposure);
         }
@@ -91,6 +111,17 @@ public class BudgetService {
             nudge = "You're on track — " + percentUsed + "% of this month's budget used.";
         }
 
-        return new Dtos.BudgetSummary(limit, spent, remaining, percentUsed, nudge, byCategory, bnplExposure);
+        return new Dtos.BudgetSummary(month.toString(), limit, spent, remaining, percentUsed, nudge, byCategory, bnplExposure);
+    }
+
+    private YearMonth parseMonth(String monthParam) {
+        if (monthParam == null || monthParam.isBlank()) {
+            return YearMonth.now(zone);
+        }
+        try {
+            return YearMonth.parse(monthParam);
+        } catch (DateTimeException e) {
+            throw new BadRequestException("month must be in yyyy-MM format, e.g. 2026-10");
+        }
     }
 }
