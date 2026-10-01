@@ -1,123 +1,205 @@
-# SuRakshaFin — Backend
+# SuRakshaFin
 
-Spring Boot 3 modular monolith implementing the core of the SuRakshaFin architecture blueprint:
-`user-identity`, `fraud-intel`, `grievance-router`, `spend-budget`, and `literacy-content`, as one
-deployable app with strict package boundaries (each package only talks to another through its
-`*Service` class — never reaches into another package's repository or entity). This makes it
-straightforward to later extract any package into its own Spring Boot microservice, which is the
-path the full blueprint (`transaction-monitor-service`, `notification-service`,
-`audit-compliance-service`, event bus, API gateway, OAuth2/OIDC, AWS deployment) describes.
+A consumer fintech safety platform that helps everyday users **spot scams, get their complaints to the right authority, keep their spending in check, and learn safe digital-money habits** — all in one place.
 
-## Run it
+---
 
-Requires Java 17+ and Maven (or use the wrapper if you generate one with `mvn -N wrapper:wrapper`).
+## a) What is this Application all about?
 
-Set a JWT signing secret first — none is hardcoded in the repo:
+SuRakshaFin ("Suraksha" means *protection* in Hindi) is a full-stack web application for people who use UPI, mobile banking and Buy-Now-Pay-Later (BNPL) every day but have no easy way to protect themselves when something goes wrong.
+
+It brings four everyday needs together under one login:
+
+| Module | What it does for the user |
+|---|---|
+| **Fraud Protection** | Browse a library of known scam patterns, report a fraud in one tap, check a payee *before* sending money, and keep a list of trusted payees. |
+| **Grievance Router** | Answer a few questions and the app works out *who* should receive your complaint (Bank, NPCI, Cyber Crime Portal or RBI Ombudsman) and drafts the complaint letter for you. |
+| **Spend Tracker** | Log spends, set a monthly budget, and get plain-language nudges, a category breakdown and your total BNPL exposure. |
+| **Literacy Hub** | Short, readable articles on UPI safety, BNPL risks, mule accounts and your grievance rights. Open to everyone, no login needed. |
+
+Alongside these, the app has secure sign-up and login (phone + password), a lightweight KYC (PAN) step, password recovery, and a minimal admin role for moving fraud reports and grievances through their review lifecycle.
+
+---
+
+## b) Why is this Application different from other applications?
+
+Most finance apps either *track money* or *move money*. SuRakshaFin focuses on what happens **around** the money — before a payment goes wrong, and after.
+
+- **Protection before payment, not just reporting after.** The pre-transaction check looks at the payee and the amount and returns a `LOW` / `MEDIUM` / `HIGH` risk level with reasons, a short safety checklist and a cooling-off timer. A payee already reported as a suspect by other users is flagged `HIGH`; a large first-time payment to someone not on your trusted list is flagged `MEDIUM`.
+- **Community-powered fraud intelligence.** Reports submitted by users feed the same check that protects the next user, and scam patterns can be confirmed by the community to show which ones are still active.
+- **It tells you *where* to complain, and writes the complaint.** Instead of leaving users to guess between the bank, NPCI, the cyber cell or the RBI Ombudsman, a routing engine decides based on simple facts (suspected fraud? already raised with the bank? no reply in 30 days? unauthorised transaction?) and generates a ready-to-send complaint letter. Complaints that pass the 30-day mark are flagged as due for escalation.
+- **BNPL visibility.** The budget summary separates out BNPL spending so users can see how much they owe in "pay later" commitments.
+- **Education built into the product.** Safety content sits next to the tools in the same app, and the content API is language-aware (`?language=` and `?topic=`), so it can be extended to regional languages.
+- **Security-first defaults.** No hardcoded secrets (the app refuses to start without a strong JWT secret), BCrypt password hashing, login lockout, server-side token revocation on logout, security response headers, and developer tools (H2 console, Swagger) switched off unless explicitly enabled.
+- **Built to grow.** The backend is a *modular monolith* with strict package boundaries, so any module can later be split into its own microservice without rewriting business logic.
+
+---
+
+## c) Application Stack
+
+### Backend — `/` (project root)
+
+| Area | Technology |
+|---|---|
+| Language / Runtime | Java 17 |
+| Framework | Spring Boot 3.3.2 (Spring Web, Spring Data JPA, Spring Validation) |
+| Security | Spring Security, JWT (JJWT 0.12.6), BCrypt password hashing |
+| Database | H2 in-memory (demo); the JPA code can run on PostgreSQL by changing the datasource in `application.yml` |
+| API docs | springdoc-openapi / Swagger UI 2.6.0 (dev only) |
+| Build | Maven |
+| Utilities | Lombok |
+| Testing | Spring Boot Test, Spring Security Test |
+
+### Frontend — `/surakshafin-UI`
+
+| Area | Technology |
+|---|---|
+| Framework | Angular 18 (standalone components, lazy-loaded routes) |
+| Language | TypeScript 5.5 |
+| Reactive layer | RxJS 7 |
+| Auth | Route guard + HTTP interceptor that attaches the JWT |
+| Dev proxy | `/api` is proxied to `http://localhost:8080` |
+
+### Backend modules (Java packages)
+
+| Package | Responsibility |
+|---|---|
+| `identity` | Registration, login, logout, password reset, profile, KYC-lite |
+| `fraud` | Scam patterns, fraud reports, pre-transaction check, trusted payees |
+| `grievance` | Routing engine, complaint drafting, grievance lifecycle |
+| `budget` | Transactions, monthly limit, spend summary and nudges |
+| `literacy` | Multi-language educational content |
+| `config` | Security, JWT, token blocklist, OpenAPI, data seeders |
+| `common` | Shared API response wrapper and exception handling |
+
+Modules talk to each other **only through their `*Service` classes**, never through another module's repository or entity.
+
+---
+
+## d) Application Architecture
+
+```mermaid
+flowchart TB
+    User([End User<br/>Browser]) --> UI
+
+    subgraph FE["Frontend: Angular 18 (surakshafin-UI)"]
+        UI[Pages<br/>Learn · Fraud · Grievances · Spend Tracker · Login/Register]
+        GUARD[Auth Guard]
+        INT[HTTP Interceptor<br/>adds JWT]
+        UI --> GUARD --> INT
+    end
+
+    INT -- "REST / JSON  (/api/v1/*)" --> SEC
+
+    subgraph BE["Backend: Spring Boot 3 Modular Monolith (port 8080)"]
+        direction TB
+        SEC[Security Layer<br/>CORS · JWT Auth Filter · Token Blocklist<br/>Role check · Security Headers]
+
+        subgraph MODS["Business Modules"]
+            direction LR
+            ID[identity<br/>Auth · Profile · KYC-lite]
+            FR[fraud<br/>Patterns · Reports<br/>Pre-transaction check · Trusted payees]
+            GR[grievance<br/>Routing engine<br/>Complaint drafting]
+            BU[budget<br/>Transactions · Limit<br/>Summary · BNPL exposure]
+            LI[literacy<br/>Vernacular content]
+        end
+
+        SEC --> ID & FR & GR & BU & LI
+        GR -- "via IdentityService" --> ID
+
+        COMMON[common<br/>ApiResponse · Global Exception Handler]
+        MODS -.-> COMMON
+
+        JPA[Spring Data JPA Repositories]
+        ID & FR & GR & BU & LI --> JPA
+    end
+
+    JPA --> DB[(H2 In-Memory DB<br/>swap to PostgreSQL for production)]
+    SEED[Startup Seeders<br/>Demo scam patterns & articles · Admin bootstrap] --> DB
+```
+
+### Request flow in short
+
+1. The user opens the Angular app; protected pages (Fraud, Grievances, Spend Tracker) are guarded by a login check.
+2. The interceptor adds the JWT to every `/api/` call.
+3. On the backend, the security layer validates the token (and checks it has not been revoked), applies CORS rules and role checks (admin-only endpoints), then passes the call to the right module.
+4. The module's service applies the business rules and reads or writes data through JPA.
+5. Every response is returned in a common `ApiResponse` wrapper; unexpected errors are logged server-side and returned to the client as a generic message.
+
+### Grievance routing logic
+
+```mermaid
+flowchart TD
+    A[New grievance] --> B{Suspected fraud?}
+    B -- Yes --> C[Cyber Crime Portal]
+    B -- No --> D{Already raised<br/>with the bank?}
+    D -- No --> E[Bank / PSP Grievance Cell]
+    D -- Yes --> F{No bank response<br/>for 30+ days?}
+    F -- Yes --> G[RBI Ombudsman]
+    F -- No --> H{Unauthorised<br/>transaction?}
+    H -- Yes --> I[NPCI Dispute Redressal]
+    H -- No --> E
+```
+
+### Pre-transaction risk check
+
+```mermaid
+flowchart TD
+    A[Payee + amount] --> B{Trusted payee?}
+    B -- Yes --> L1[LOW]
+    B -- No --> C{UPI ID or phone<br/>already reported?}
+    C -- Yes --> H1[HIGH<br/>checklist + cooling-off timer]
+    C -- No --> D{Amount at or above<br/>new-payee threshold?}
+    D -- Yes --> M1[MEDIUM<br/>checklist + cooling-off timer]
+    D -- No --> L2[LOW]
+```
+
+---
+
+## e) Why is this Application helpful for end users?
+
+- **Fewer people lose money to scams.** A clear warning with reasons, a safety checklist and a short pause appear at the exact moment a mistake is most likely — right before the payment is confirmed.
+- **No more "who do I complain to?"** Users get a clear answer and a ready-made, properly addressed complaint letter, which saves time and lowers the barrier to actually filing.
+- **Knowing your rights.** The app shows when a complaint can be escalated (for example, after 30 days without a bank response), so users are not stuck waiting.
+- **Control over spending.** Simple budget nudges in plain language and a clear view of BNPL dues help users avoid slipping into debt unnoticed.
+- **Learn while you use it.** Short safety articles on UPI, BNPL, mule accounts and grievance rights are free and available without signing in.
+- **Safe with personal data.** Strong password rules, lockout after repeated failed logins, token revocation on logout and no secrets in code keep accounts protected.
+- **One place for it all.** Fraud help, complaint filing, budgeting and learning live in a single, simple app instead of being scattered across bank apps, government portals and websites.
+
+---
+
+## Quick Start
+
+**Requirements:** Java 17+, Maven, Node.js 18+ (for the UI)
+
+### Backend
 
 ```bash
 export SURAKSHAFIN_JWT_SECRET=$(openssl rand -hex 32)
 mvn spring-boot:run
 ```
 
-The app starts on `http://localhost:8080`.
+Runs on `http://localhost:8080`. Optional environment variables:
 
-- Swagger UI: `http://localhost:8080/docs`
-- H2 console: `http://localhost:8080/h2-console` (JDBC URL `jdbc:h2:mem:surakshafin`, user `sa`, blank password)
+| Variable | Purpose |
+|---|---|
+| `SURAKSHAFIN_JWT_SECRET` | **Required.** JWT signing secret (32+ bytes). |
+| `SURAKSHAFIN_DEV_TOOLS_ENABLED` | `true` enables Swagger UI (`/docs`) and the H2 console for local development. |
+| `SURAKSHAFIN_CORS_ORIGINS` | Allowed frontend origin(s). Defaults to `http://localhost:*`. |
+| `SURAKSHAFIN_ADMIN_PHONE` / `SURAKSHAFIN_ADMIN_PASSWORD` | Optional: creates the first admin account at startup. |
 
-Demo scam patterns and literacy articles are seeded automatically on startup — see `DemoDataSeeder`.
+### Frontend
 
-## API summary
+```bash
+cd surakshafin-UI
+npm install
+npm start
+```
 
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| POST | `/api/v1/auth/register` | none | Create account (phone + password) |
-| POST | `/api/v1/auth/login` | none | Get a JWT |
-| POST | `/api/v1/auth/logout` | JWT | Revoke the current token |
-| POST | `/api/v1/auth/forgot-password` | none | Request a password-reset code |
-| POST | `/api/v1/auth/reset-password` | none | Reset password with the code |
-| GET | `/api/v1/users/me` | JWT | Current profile |
-| POST | `/api/v1/users/me/kyc-lite` | JWT | Submit PAN for KYC-lite verification |
-| GET | `/api/v1/fraud/patterns` | JWT | Scam pattern library |
-| POST | `/api/v1/fraud/reports` | JWT | One-tap fraud report |
-| GET | `/api/v1/fraud/reports/mine` | JWT | My submitted reports |
-| PATCH | `/api/v1/fraud/reports/{id}/status` | JWT (admin) | Move a report through its review lifecycle |
-| POST | `/api/v1/fraud/patterns/{id}/confirm` | JWT | Confirm a scam pattern is still active |
-| POST | `/api/v1/fraud/pre-transaction-check` | JWT | Risk-check a payee before a transfer is confirmed |
-| POST | `/api/v1/fraud/trusted-payees` | JWT | Mark a payee as trusted |
-| GET | `/api/v1/fraud/trusted-payees` | JWT | List trusted payees |
-| DELETE | `/api/v1/fraud/trusted-payees/{id}` | JWT | Remove a trusted payee |
-| POST | `/api/v1/grievances` | JWT | Run the routing wizard, file + auto-draft a complaint |
-| GET | `/api/v1/grievances/mine` | JWT | My grievances |
-| GET | `/api/v1/grievances/{id}` | JWT | One grievance, incl. generated complaint text |
-| PATCH | `/api/v1/grievances/{id}/status` | JWT (admin) | Move a grievance through its lifecycle |
-| POST | `/api/v1/budget/transactions` | JWT | Log a spend transaction |
-| GET | `/api/v1/budget/transactions` | JWT | List transactions |
-| PUT | `/api/v1/budget/limit` | JWT | Set monthly budget |
-| GET | `/api/v1/budget/summary` | JWT | Spend vs. budget, category breakdown, BNPL exposure, nudge |
-| GET | `/api/v1/literacy` | none | Vernacular literacy content (`?language=hi&topic=UPI_SAFETY`) |
+Runs on `http://localhost:4200` and proxies `/api` calls to the backend.
 
-## Security & feature updates in this revision
+---
 
-A security/feature-gap review added the following. Nothing here required a new dependency.
+## License
 
-**Security fixes**
-- `SURAKSHAFIN_JWT_SECRET` is now mandatory with no weak fallback — the app refuses to start
-  without a real, 32-byte-plus secret (previously fell back to a fixed placeholder string).
-- Passwords must now be 8+ characters with a letter and a number (previously any non-blank string).
-- Login lockout after `surakshafin.security.max-login-attempts` (default 5) failed attempts, for
-  `lockout-minutes` (default 15) — previously unlimited attempts were allowed.
-- `/auth/logout` now actually revokes the bearer token via an in-memory blocklist — previously
-  there was no way to end a session server-side.
-- Unhandled exceptions no longer leak internal messages to the client; they're logged server-side
-  and a generic message is returned instead.
-- H2 console and Swagger/OpenAPI are now off by default; opt in for local dev with
-  `SURAKSHAFIN_DEV_TOOLS_ENABLED=true`.
-- CORS allowed origins are now configurable via `SURAKSHAFIN_CORS_ORIGINS` instead of hardcoded to
-  `localhost`.
-- Added `Strict-Transport-Security`, `X-Content-Type-Options`, and `Referrer-Policy` response headers.
-- Free-text fields (fraud report details, grievance description, merchant name) now have request-level
-  size caps, matching the DB column limits.
-
-**Feature gaps closed**
-- `User.kycLiteVerified` and both `FraudReport.status` / `Grievance.status` fields existed but had no
-  code path that ever changed them. Added `POST /users/me/kyc-lite`,
-  `PATCH /fraud/reports/{id}/status`, `PATCH /grievances/{id}/status` (the latter two are
-  operator/admin-only — see below).
-- Added `POST /auth/forgot-password` and `POST /auth/reset-password` — there was previously no
-  account-recovery path. (Demo-mode: the reset code is returned in the API response since no SMS
-  gateway is wired up; production would text it and return only an acknowledgement.)
-- Added a minimal admin/operator role (`User.admin`), bootstrapped only via
-  `SURAKSHAFIN_ADMIN_PHONE` / `SURAKSHAFIN_ADMIN_PASSWORD` env vars at first startup — needed so
-  the new status-update endpoints have someone authorized to call them.
-
-**New features (small, additive, backend-only in this pass)**
-- Budget summary now includes a per-category spend breakdown and total BNPL exposure (built from
-  data that was already being recorded per-transaction but never aggregated).
-- Grievance responses now include `daysSinceFiled` and an `escalationDue` flag once a bank-routed
-  complaint passes the 30-day RBI Ombudsman threshold.
-- Scam patterns can now be community-confirmed via `POST /fraud/patterns/{id}/confirm` (demo-scope:
-  not yet deduped per user — see the code comment in `FraudService`).
-
-**Deliberately out of scope for this pass** — these are new subsystems, not gaps to patch, and
-need their own design pass: the notification service / event bus, an admin UI (the admin endpoints
-above are API-only for now), offline-first support in the Angular UI, and the GenAI/agentic
-features discussed separately. The Angular frontend also hasn't been wired up to any of the new
-endpoints yet — this revision is backend-only.
-
-⚠️ This code hasn't been build-verified in this environment (no Maven Central access here to run
-`mvn compile`) — please run `mvn clean compile` locally before relying on it, and open an issue if
-anything doesn't compile.
-
-## What's simplified vs. the full blueprint, and why
-
-- **Auth**: hand-rolled JWT issuance instead of OAuth2/OIDC via Cognito/Keycloak — same shape
-  (short-lived bearer tokens, stateless), swappable later without touching business logic.
-- **Data store**: H2 in-memory instead of PostgreSQL + MongoDB — same JPA code works against
-  Postgres by changing the datasource URL/driver in `application.yml`.
-- **No event bus**: fraud reports and grievance filings are saved directly; the code comments
-  mark exactly where a `FraudAlertRaised` / `ComplaintFiled` event would be published to SNS/SQS
-  for `notification-service` and `audit-compliance-service` to react to.
-- **Not built**: `transaction-monitor-service` (needs a real Account Aggregator data-sharing
-  partnership — flagged as an open decision in the blueprint), `mule-check-service` (needs
-  RBI/NPCI data cooperation), the AWS/Azure infra, Terraform, and the API gateway layer
-  (Apigee / AWS API Gateway) — CORS + JWT validation are done in-app instead for the demo.
+See the [LICENSE](LICENSE) file.
