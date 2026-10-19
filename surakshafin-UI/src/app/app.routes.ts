@@ -30,5 +30,10 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/budget/budget.component').then((m) => m.BudgetComponent),
   },
+  {
+    path: 'banking',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/banking/banking.component').then((m) => m.BankingComponent),
+  },
   { path: '**', redirectTo: 'literacy' },
 ];

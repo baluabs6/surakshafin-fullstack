@@ -39,6 +39,12 @@ export class AuthService {
     return !!this.token;
   }
 
+  /** Refresh the cached profile after it changes server-side (e.g. KYC verified). */
+  updateProfile(profile: UserProfile): void {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    this.currentUser.set(profile);
+  }
+
   private storeSession(auth: AuthResponse): void {
     localStorage.setItem(TOKEN_KEY, auth.token);
     localStorage.setItem(PROFILE_KEY, JSON.stringify(auth.profile));

@@ -57,6 +57,7 @@ public class SecurityConfig {
                     }
                     auth.requestMatchers("/api/v1/fraud/reports/*/status").hasRole("ADMIN");
                     auth.requestMatchers("/api/v1/grievances/*/status").hasRole("ADMIN");
+                    auth.requestMatchers("/api/v1/banking/accounts/*/status").hasRole("ADMIN");
                     auth.anyRequest().authenticated();
                 })
                 .headers(headers -> {

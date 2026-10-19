@@ -15,6 +15,7 @@ import { AuthService } from './core/auth.service';
         </a>
         <nav class="primary-nav">
           <a routerLink="/literacy" routerLinkActive="active">Learn</a>
+          <a routerLink="/banking" routerLinkActive="active">Banking</a>
           <a routerLink="/fraud" routerLinkActive="active">Fraud Protection</a>
           <a routerLink="/grievance" routerLinkActive="active">Grievances</a>
           <a routerLink="/budget" routerLinkActive="active">Spend Tracker</a>

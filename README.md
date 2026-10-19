@@ -15,6 +15,7 @@ It brings four everyday needs together under one login:
 | **Fraud Protection** | Browse a library of known scam patterns, report a fraud in one tap, check a payee *before* sending money, and keep a list of trusted payees. |
 | **Grievance Router** | Answer a few questions and the app works out *who* should receive your complaint (Bank, NPCI, Cyber Crime Portal or RBI Ombudsman) and drafts the complaint letter for you. |
 | **Spend Tracker** | Log spends, set a monthly budget, and get plain-language nudges, a category breakdown and your total BNPL exposure. |
+| **Banking** | Open savings/current accounts, move money by IMPS/NEFT/RTGS to saved beneficiaries (each transfer is fraud-screened first), view and export statements, book fixed deposits and plan loans with an EMI calculator. |
 | **Literacy Hub** | Short, readable articles on UPI safety, BNPL risks, mule accounts and your grievance rights. Open to everyone, no login needed. |
 
 Alongside these, the app has secure sign-up and login (phone + password), a lightweight KYC (PAN) step, password recovery, and a minimal admin role for moving fraud reports and grievances through their review lifecycle.
@@ -68,6 +69,7 @@ Most finance apps either *track money* or *move money*. SuRakshaFin focuses on w
 | `fraud` | Scam patterns, fraud reports, pre-transaction check, trusted payees |
 | `grievance` | Routing engine, complaint drafting, grievance lifecycle |
 | `budget` | Transactions, monthly limit, spend summary and nudges |
+| `banking` | Accounts, append-only ledger, transfers, beneficiaries, fixed deposits, EMI calculator |
 | `literacy` | Multi-language educational content |
 | `config` | Security, JWT, token blocklist, OpenAPI, data seeders |
 | `common` | Shared API response wrapper and exception handling |
@@ -83,7 +85,7 @@ flowchart TB
     User([End User<br/>Browser]) --> UI
 
     subgraph FE["Frontend: Angular 18 (surakshafin-UI)"]
-        UI[Pages<br/>Learn · Fraud · Grievances · Spend Tracker · Login/Register]
+        UI[Pages<br/>Learn · Banking · Fraud · Grievances · Spend Tracker · Login/Register]
         GUARD[Auth Guard]
         INT[HTTP Interceptor<br/>adds JWT]
         UI --> GUARD --> INT
@@ -102,16 +104,18 @@ flowchart TB
             GR[grievance<br/>Routing engine<br/>Complaint drafting]
             BU[budget<br/>Transactions · Limit<br/>Summary · BNPL exposure]
             LI[literacy<br/>Vernacular content]
+            BK[banking<br/>Accounts · Ledger · Transfers<br/>Beneficiaries · Fixed deposits · EMI]
         end
 
-        SEC --> ID & FR & GR & BU & LI
+        SEC --> ID & FR & GR & BU & LI & BK
+        BK -- "via FraudService / IdentityService" --> FR
         GR -- "via IdentityService" --> ID
 
         COMMON[common<br/>ApiResponse · Global Exception Handler]
         MODS -.-> COMMON
 
         JPA[Spring Data JPA Repositories]
-        ID & FR & GR & BU & LI --> JPA
+        ID & FR & GR & BU & LI & BK --> JPA
     end
 
     JPA --> DB[(H2 In-Memory DB<br/>swap to PostgreSQL for production)]
@@ -155,6 +159,31 @@ flowchart TD
 ```
 
 ---
+
+### Banking module
+
+All endpoints are under `/api/v1/banking` and need a login. Opening an account requires the KYC-lite step.
+
+| Area | Endpoints | Notes |
+|---|---|---|
+| Accounts | `POST/GET /accounts`, `GET /accounts/{id}` | Savings or current, max 3 per user. 12-digit account number, IFSC from config. |
+| Cash | `POST /accounts/{id}/deposit`, `/withdraw` | Deposits are a **demo funding source** (no real money rail). Turn off with `SURAKSHAFIN_DEMO_DEPOSITS_ENABLED=false`. |
+| Statement | `GET /accounts/{id}/statement`, `/statement.csv` | Paged, date-ranged view over the ledger; CSV export. |
+| Beneficiaries | `GET/POST /beneficiaries`, `DELETE /beneficiaries/{id}` | Verifies the account exists and stores the holder's *masked* name. Optionally adds to trusted payees. |
+| Transfers | `POST /transfers/check`, `POST /transfers`, `GET /transfers` | Between SuRakshaFin accounts only. Destination must be your own account or a saved beneficiary. |
+| Fixed deposits | `GET /fixed-deposits/quote`, `POST/GET /fixed-deposits`, `POST /fixed-deposits/{id}/close` | Quarterly compounding; early closure at 1 point lower rate (nothing if under 7 days). A nightly job pays out matured deposits. |
+| Loans | `GET /loans/emi` | Reducing-balance EMI with full schedule. Calculator only: there is no loan origination. |
+| Admin | `PATCH /accounts/{id}/status` | Freeze/unfreeze. A frozen account blocks debits but still accepts credits. |
+
+How money safety works:
+
+- **One ledger path.** Every balance change goes through `AccountService.credit/debit`, which writes an immutable `ledger_entries` row with the balance after the movement.
+- **Row locks.** Balance changes take a pessimistic lock on the account row (re-read after locking). Transfers lock both accounts in ascending id order, so opposite transfers cannot deadlock.
+- **Idempotent transfers.** Each transfer carries a client-generated `idempotencyKey`; retrying the same key returns the original result and never moves money twice. Reusing a key for a different transfer returns `409`.
+- **Fraud screening.** Transfers to another person are checked by `FraudService`, using the payee id `<accountNumber>@<IFSC>.ifsc.npci`. `HIGH` (a reported account) is blocked; `MEDIUM` (new payee, amount at or above the threshold) needs `acknowledgeRisk=true`. To flag an account, submit a fraud report with that id as the suspect UPI id.
+- **Limits.** IMPS up to 5 lakh, RTGS from 2 lakh, plus a per-account daily transfer limit (default 1 lakh).
+
+Config lives under `surakshafin.banking` in `application.yml`.
 
 ## e) Why is this Application helpful for end users?
 

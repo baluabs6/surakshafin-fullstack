@@ -42,6 +42,16 @@ surakshafin:
     # New feature: pre-transaction safety check thresholds.
     new-payee-amount-threshold: 5000
     cooling-off-seconds: 600
+  banking:
+    # Bank branch code printed on every account. IFSC format: 4 letters, a zero, 6 alphanumerics.
+    ifsc: SURK0000001
+    timezone: Asia/Kolkata
+    default-daily-transfer-limit: 100000
+    max-accounts-per-user: 3
+    # There is no real money rail behind this app. Deposits are a demo funding source: turn them
+    # off (SURAKSHAFIN_DEMO_DEPOSITS_ENABLED=false) anywhere real balances would matter.
+    demo-deposits-enabled: "${SURAKSHAFIN_DEMO_DEPOSITS_ENABLED:true}"
+    max-deposit-amount: 200000
   security:
     max-login-attempts: 5
     lockout-minutes: 15
